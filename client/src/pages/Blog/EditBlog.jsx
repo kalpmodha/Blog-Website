@@ -211,7 +211,11 @@ const EditBlog = () => {
                                         <FormItem>
                                             <FormLabel>Blog Content</FormLabel>
                                             <FormControl>
-                                                <Editor props={{ initialData: field.value, onChange: handleEditorData }} />
+                                                <Editor props={{ 
+                                                    initialData: field.value, 
+                                                    onChange: handleEditorData,
+                                                    blogTitle: blogTitle 
+                                                }} />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>

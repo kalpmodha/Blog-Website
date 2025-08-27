@@ -192,7 +192,11 @@ const AddBlog = () => {
                                         <FormItem>
                                             <FormLabel>Blog Content</FormLabel>
                                             <FormControl>
-                                                <Editor props={{ initialData: '', onChange: handleEditorData }} />
+                                                <Editor props={{ 
+                                                    initialData: '', 
+                                                    onChange: handleEditorData,
+                                                    blogTitle: blogTitle 
+                                                }} />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>

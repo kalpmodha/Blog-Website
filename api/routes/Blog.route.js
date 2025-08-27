@@ -1,11 +1,12 @@
 import express from 'express'
-import { addBlog, deleteBlog, editBlog, getAllBlogs, getBlog, getBlogByCategory, getRelatedBlog, search, showAllBlog, updateBlog } from '../controllers/Blog.controller.js'
+import { addBlog, generateContent,deleteBlog, editBlog, getAllBlogs, getBlog, getBlogByCategory, getRelatedBlog, search, showAllBlog, updateBlog } from '../controllers/Blog.controller.js'
 import upload from '../config/multer.js'
 import { authenticate } from '../middleware/authenticate.js'
 
 const BlogRoute = express.Router()
 
 BlogRoute.post('/add', authenticate, upload.single('file'), addBlog)
+BlogRoute.post('/generate', authenticate, generateContent)
 BlogRoute.get('/edit/:blogid', authenticate, editBlog)
 BlogRoute.put('/update/:blogid', authenticate, upload.single('file'), updateBlog)
 BlogRoute.delete('/delete/:blogid', authenticate, deleteBlog)

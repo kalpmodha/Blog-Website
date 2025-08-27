@@ -63,6 +63,9 @@ import {
 } from 'ckeditor5';
 
 import 'ckeditor5/ckeditor5.css';
+import { getEvn } from '@/helpers/getEnv';
+import { showToast } from '@/helpers/showToast';
+import { parse } from 'marked';
 
 // import './App.css';
 
@@ -76,12 +79,66 @@ export default function Editor({ props }) {
     const editorRef = useRef(null);
     const editorWordCountRef = useRef(null);
     const [isLayoutReady, setIsLayoutReady] = useState(false);
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [editorInstance, setEditorInstance] = useState(null);
 
     useEffect(() => {
         setIsLayoutReady(true);
 
         return () => setIsLayoutReady(false);
     }, []);
+
+    const handleGenerateWithAI = async () => {
+        const blogTitle = props.blogTitle;
+        
+        if (!blogTitle || !blogTitle.trim()) {
+            showToast('error', 'Please enter a blog title first');
+            return;
+        }
+
+        if (!editorInstance) {
+            showToast('error', 'Editor is not ready');
+            return;
+        }
+
+        setIsGenerating(true);
+        try {
+            const response = await fetch(`${getEvn('VITE_API_BASE_URL')}/blog/generate`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'include',
+                body: JSON.stringify({
+                    prompt: blogTitle
+                })
+            });
+
+            const data = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(data.message || 'Failed to generate content');
+            }
+
+            if (data.success) {
+                // Convert Markdown to HTML and set into CKEditor
+                const htmlContent = parse(data.content);
+                editorInstance.setData(htmlContent);
+                showToast('success', 'Content generated successfully!');
+            } else {
+                throw new Error('No content generated');
+            }
+        } catch (error) {
+            //console.error('Error generating content:', error);
+            showToast('error', error.message || 'Failed to generate content');
+        } finally {
+            setIsGenerating(false);
+        }
+    };
+
+    const handleGenerateClick = () => {
+        handleGenerateWithAI();
+    };
 
     const { editorConfig } = useMemo(() => {
         if (!isLayoutReady) {
@@ -296,17 +353,81 @@ export default function Editor({ props }) {
             <div
                 className="editor-container editor-container_classic-editor editor-container_include-block-toolbar editor-container_include-word-count"
                 ref={editorContainerRef}
+                style={{ position: 'relative' }}
             >
+                {/* Generate with AI Button - Positioned inside the editor */}
+                <div style={{ 
+                    position: 'absolute',
+                    top: '60px', 
+                    right: '10px',
+                    zIndex: 1000,
+                    pointerEvents: 'auto'
+                }}>
+                    <button
+                        onClick={handleGenerateClick}
+                        disabled={isGenerating}
+                        style={{
+                            padding: '8px 16px',
+                            backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                            color: '#333333',
+                            borderRadius: '6px',
+                            border: '1px solid rgba(147, 51, 234, 0.3)',
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                            fontWeight: '500',
+                            transition: 'all 0.3s ease',
+                            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+                            backdropFilter: 'blur(8px)',
+                            position: 'relative',
+                            overflow: 'hidden',
+                            opacity: isGenerating ? 0.7 : 1
+                        }}
+                        onMouseOver={(e) => {
+                            if (!isGenerating) {
+                                e.target.style.transform = 'translateY(-1px)';
+                                e.target.style.boxShadow = '0 4px 12px rgba(147, 51, 234, 0.2)';
+                                e.target.style.borderColor = 'rgba(147, 51, 234, 0.6)';
+                            }
+                        }}
+                        onMouseOut={(e) => {
+                            if (!isGenerating) {
+                                e.target.style.transform = 'translateY(0)';
+                                e.target.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
+                                e.target.style.borderColor = 'rgba(147, 51, 234, 0.3)';
+                            }
+                        }}
+                    >
+                        {/* Subtle animated border */}
+                        <div style={{
+                            position: 'absolute',
+                            top: '-1px',
+                            left: '-1px',
+                            right: '-1px',
+                            bottom: '-1px',
+                            background: 'linear-gradient(45deg, rgba(147, 51, 234, 0.8), rgba(59, 130, 246, 0.8), rgba(147, 51, 234, 0.8))',
+                            backgroundSize: '200% 200%',
+                            borderRadius: '7px',
+                            zIndex: -1,
+                            animation: isGenerating ? 'none' : 'subtleShift 4s ease infinite',
+                            opacity: 0.6
+                        }}></div>
+                        
+                        {isGenerating ? 'Generating...' : 'Generate with AI'}
+                    </button>
+                </div>
+                
                 <div className="editor-container__editor">
                     <div ref={editorRef}>
                         {editorConfig && (
                             <CKEditor
                                 onChange={props.onChange}
                                 onReady={editor => {
+                                    setEditorInstance(editor);
                                     const wordCount = editor.plugins.get('WordCount');
                                     editorWordCountRef.current.appendChild(wordCount.wordCountContainer);
                                 }}
                                 onAfterDestroy={() => {
+                                    setEditorInstance(null);
                                     Array.from(editorWordCountRef.current.children).forEach(child => child.remove());
                                 }}
                                 editor={ClassicEditor}
@@ -317,6 +438,7 @@ export default function Editor({ props }) {
                 </div>
                 <div className="editor_container__word-count" ref={editorWordCountRef}></div>
             </div>
+            
         </div>
     );
 }

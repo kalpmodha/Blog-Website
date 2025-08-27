@@ -3,6 +3,8 @@ import { handleError } from "../helpers/handleError.js"
 import Blog from "../models/blog.model.js"
 import { encode } from 'entities'
 import Category from "../models/category.model.js"
+import main from "../config/gemini.js"
+
 export const addBlog = async (req, res, next) => {
     try {
         const data = JSON.parse(req.body.data)
@@ -41,6 +43,18 @@ export const addBlog = async (req, res, next) => {
         next(handleError(500, error.message))
     }
 }
+
+export const generateContent = async (req, res, next) => {
+    try {
+        const { prompt } = req.body
+        const content =await main(prompt + 'Generate a blog content for this topic in simple text formate.')
+        res.json({success: true, content})
+    }
+    catch(error){
+        next(handleError(500, error.message))
+    }
+}
+
 export const editBlog = async (req, res, next) => {
     try {
         const { blogid } = req.params
